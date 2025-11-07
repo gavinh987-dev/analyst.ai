@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import { createPowerPoint } from '../../lib/ppt-generator';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPEN_AI_API_KEY,
 });
 
 export const config = {

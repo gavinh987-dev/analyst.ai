@@ -15,7 +15,7 @@ export default function Home() {
 
   return (
     <div style={{ maxWidth: '600px', margin: '50px auto', padding: '20px', fontFamily: 'Arial' }}>
-      <h1>Analyst.ai</h1>
+      <h1>ANALYST.ai</h1>
       <p>Upload your Excel file to generate a PowerPoint presentation</p>
       
       <div style={{ border: '2px dashed #ccc', padding: '40px', textAlign: 'center', margin: '20px 0' }}>

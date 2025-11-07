@@ -1,10 +1,9 @@
 import { IncomingForm } from 'formidable';
 import fs from 'fs';
 import OpenAI from 'openai';
-import { createPowerPoint } from '../../lib/ppt-generator';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPEN_AI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export const config = {
@@ -13,13 +12,29 @@ export const config = {
   },
 };
 
+// Simple function to simulate Excel parsing
+function parseExcelData() {
+  // For now, we'll return sample data
+  // Later we can add real Excel parsing with a library like 'xlsx'
+  return `
+Financial Data Summary:
+- Revenue: $1.2M (15% growth QoQ)
+- Gross Margin: 45% (stable)
+- Operating Expenses: $600K
+- Net Income: $180K
+- Cash Flow from Operations: $250K
+- Current Ratio: 2.1
+- Debt-to-Equity: 0.3
+  `;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // 1. Parse the uploaded file
+    // Parse the uploaded file
     const form = new IncomingForm();
     const [fields, files] = await new Promise((resolve, reject) => {
       form.parse(req, (err, fields, files) => {
@@ -29,21 +44,23 @@ export default async function handler(req, res) {
     });
 
     const file = files.file[0];
-    const fileBuffer = fs.readFileSync(file.filepath);
     
-    // 2. Convert Excel to text for AI analysis
-    const fileText = await convertExcelToText(fileBuffer);
+    // Get file info for the response
+    const fileName = file.originalFilename || 'financial_data';
     
-    // 3. AI Analysis
-    const analysis = await analyzeWithAI(fileText);
+    // Parse the Excel data (simplified for now)
+    const financialData = parseExcelData();
     
-    // 4. Generate PowerPoint
-    const powerpointBuffer = await createPowerPoint(analysis);
+    // AI Analysis
+    const analysis = await analyzeWithAI(financialData, fileName);
     
-    // 5. Send back to user
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
-    res.setHeader('Content-Disposition', 'attachment; filename=financial-analysis.pptx');
-    res.send(powerpointBuffer);
+    // Create a simple text file as placeholder for PowerPoint
+    const outputContent = `Financial Analysis Report\n\n${analysis}`;
+    
+    // Send back as a downloadable file
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}-analysis.txt"`);
+    res.send(outputContent);
 
   } catch (error) {
     console.error('Error:', error);
@@ -51,43 +68,35 @@ export default async function handler(req, res) {
   }
 }
 
-async function convertExcelToText(buffer) {
-  // For now, we'll use a simple approach
-  // Later we can use libraries like xlsx or sheetjs
-  return "Financial data placeholder - will implement Excel parsing";
-}
-
-async function analyzeWithAI(data) {
+async function analyzeWithAI(financialData, fileName) {
   const prompt = `
-You are a senior financial analyst. Analyze this financial data and create a presentation outline.
+You are a senior financial analyst. Analyze this financial data and create a comprehensive presentation outline.
 
+COMPANY: ${fileName}
 FINANCIAL DATA:
-${data}
+${financialData}
 
-Please return a JSON with this exact structure:
-{
-  "presentation_title": "Q4 2024 Financial Performance Review",
-  "executive_summary": ["Point 1", "Point 2", "Point 3"],
-  "slides": [
-    {
-      "title": "Executive Summary",
-      "content": ["Bullet 1", "Bullet 2", "Bullet 3"],
-      "chart_type": "none"
-    },
-    {
-      "title": "Revenue Performance", 
-      "content": ["Revenue grew 15% QoQ", "Enterprise segment driving growth"],
-      "chart_type": "line"
-    }
-  ]
-}
+Please provide a detailed financial analysis with:
+1. EXECUTIVE SUMMARY (3-4 bullet points)
+2. REVENUE PERFORMANCE (trends, growth drivers)
+3. PROFITABILITY ANALYSIS (margins, cost structure)  
+4. CASH FLOW & BALANCE SHEET (liquidity, financial health)
+5. KEY METRICS & RATIOS (important numbers to watch)
+6. RECOMMENDATIONS (3 actionable insights)
+
+Format this as a clear, professional analysis that can be used in a management presentation.
 `;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.3, // More consistent, analytical responses
-  });
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1500,
+      temperature: 0.3,
+    });
 
-  return JSON.parse(response.choices[0].message.content);
+    return response.choices[0].message.content;
+  } catch (error) {
+    throw new Error('AI analysis failed: ' + error.message);
+  }
 }

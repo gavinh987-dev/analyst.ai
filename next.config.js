@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable static exports for deployment
-  output: 'export',
-  // Disable server-side features for static export
+  // ❌ Remove this if you need API routes:
+  // output: 'export',
   trailingSlash: true,
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

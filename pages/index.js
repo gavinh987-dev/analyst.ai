@@ -3,48 +3,48 @@ import { useState } from 'react';
 export default function Home() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
   const handleUpload = async () => {
     if (!file) return;
     
     setLoading(true);
+    setMessage('Starting upload...');
+    
     const formData = new FormData();
     formData.append('file', file);
 
     try {
+      setMessage('Sending to server...');
       const response = await fetch('/api/analyze', {
         method: 'POST',
         body: formData,
       });
       
+      setMessage('Processing response...');
+      
       if (response.ok) {
-        // Get the file as blob
         const blob = await response.blob();
+        setMessage('Creating download...');
         
-        // Create download link
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        
-        // Get filename from response headers or use default
-        const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = 'financial-analysis.txt';
-        if (contentDisposition) {
-          const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-          if (filenameMatch) filename = filenameMatch[1];
-        }
-        
-        a.download = filename;
+        a.download = 'financial-analysis.txt';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
+        
+        setMessage('✅ Download complete!');
       } else {
-        const error = await response.text();
-        alert('Error: ' + error);
+        const errorText = await response.text();
+        setMessage(`❌ Error: ${errorText}`);
+        console.error('Server error:', errorText);
       }
     } catch (error) {
-      alert('Error: ' + error.message);
+      setMessage(`❌ Network error: ${error.message}`);
+      console.error('Network error:', error);
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,10 @@ export default function Home() {
         <input
           type="file"
           accept=".xlsx,.xls,.csv"
-          onChange={(e) => setFile(e.target.files[0])}
+          onChange={(e) => {
+            setFile(e.target.files[0]);
+            setMessage('');
+          }}
         />
         {file && <p>Selected: {file.name}</p>}
       </div>
@@ -73,11 +76,23 @@ export default function Home() {
           padding: '10px 20px',
           border: 'none',
           borderRadius: '5px',
-          cursor: loading ? 'not-allowed' : 'pointer'
+          cursor: loading ? 'not-allowed' : 'pointer',
+          marginBottom: '20px'
         }}
       >
         {loading ? 'Processing...' : 'Create Analysis'}
       </button>
+
+      {message && (
+        <div style={{
+          padding: '10px',
+          background: message.includes('❌') ? '#fee' : '#efe',
+          border: '1px solid #ccc',
+          borderRadius: '5px'
+        }}>
+          {message}
+        </div>
+      )}
     </div>
   );
 }

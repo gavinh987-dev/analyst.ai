@@ -10,41 +10,47 @@ export default function Home() {
     
     setLoading(true);
     setMessage('Starting upload...');
-    
-    const formData = new FormData();
-    formData.append('file', file);
 
     try {
-      setMessage('Sending to server...');
+      const formData = new FormData();
+      formData.append('file', file);
+
+      setMessage('Uploading file...');
       const response = await fetch('/api/analyze', {
         method: 'POST',
         body: formData,
       });
-      
+
       setMessage('Processing response...');
-      
+
       if (response.ok) {
-        const blob = await response.blob();
-        setMessage('Creating download...');
+        // Check if it's a file download
+        const contentType = response.headers.get('content-type');
         
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'financial-analysis.txt';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        setMessage('✅ Download complete!');
+        if (contentType && contentType.includes('text/plain')) {
+          // It's a file download
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `financial-analysis-${Date.now()}.txt`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          setMessage('✅ Analysis complete! File downloaded.');
+        } else {
+          // It's a JSON response (error)
+          const result = await response.json();
+          setMessage(`❌ Error: ${result.error || result.message}`);
+        }
       } else {
+        // HTTP error
         const errorText = await response.text();
-        setMessage(`❌ Error: ${errorText}`);
-        console.error('Server error:', errorText);
+        setMessage(`❌ Server error: ${errorText}`);
       }
     } catch (error) {
       setMessage(`❌ Network error: ${error.message}`);
-      console.error('Network error:', error);
     } finally {
       setLoading(false);
     }
